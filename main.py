@@ -3,6 +3,12 @@
 
 from fastapi import FastAPI, Request, HTTPException
 from src.handlers import telegram
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
 
 app = FastAPI()
 
