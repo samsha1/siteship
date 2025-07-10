@@ -2,13 +2,10 @@
 # Main FastAPI app entry point.
 
 from fastapi import FastAPI, Request, HTTPException
-from src.handlers import telegram
-from dotenv import load_dotenv
-import os
+from src.handlers.telegram import send_message
+from src.common.logger import get_logger
 
-load_dotenv()
-
-telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
+logger = get_logger(__name__)
 
 app = FastAPI()
 
@@ -17,14 +14,17 @@ async def ping():
     """A simple test route to check if the server is running."""
     return {"ping": "pong"}
 
-@app.post("/telegram-webhook")
+@app.post("/webhook")
 async def telegram_webhook(request: Request):
     """
     Endpoint to receive webhooks from the Telegram Bot API.
     """
     try:
         payload = await request.json()
-        telegram.handle_telegram_webhook(payload)
-        return {"status": "ok"}
+        logger.info("Received webhook payload: %s", payload)
+        return send_message(
+            chat_id=payload.get("message", {}).get("chat", {}).get("id"),
+            text=f"Received message: {payload.get('message', {}).get('text', '')}"
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
