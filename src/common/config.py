@@ -60,7 +60,7 @@ class Settings(BaseSettings):
         None, description="Supabase authentication password"
     )
 
-    OPENAI_API_KEY: str = Field(..., description="OpenAI API key")
+    # OPENAI_API_KEY: str = Field(..., description="OpenAI API key")
     EMBEDDING_MODEL: str = Field(
         "text-embedding-3-large", description="OpenAI embedding model name"
     )

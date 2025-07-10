@@ -5,8 +5,7 @@ Logging utilities for the API.
 import logging
 import sys
 from typing import Optional
-
-from config import settings
+from src.common.config import settings
 
 def get_logger(name: str, log_level: Optional[str] = None) -> logging.Logger:
     """
