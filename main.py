@@ -20,6 +20,7 @@ async def telegram_webhook(request: Request):
     Endpoint to receive webhooks from the Telegram Bot API.
     """
     try:
+        
         payload = await request.json()
         logger.info("Received webhook payload: %s", payload)
         return await send_message(
