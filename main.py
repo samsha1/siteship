@@ -14,7 +14,7 @@ async def ping():
     """A simple test route to check if the server is running."""
     return {"ping": "pong"}
 
-@app.post("/webhook")
+@app.post("/telegram-webhook")
 async def telegram_webhook(request: Request):
     """
     Endpoint to receive webhooks from the Telegram Bot API.
