@@ -22,7 +22,7 @@ async def telegram_webhook(request: Request):
     try:
         payload = await request.json()
         logger.info("Received webhook payload: %s", payload)
-        return send_message(
+        return await send_message(
             chat_id=payload.get("message", {}).get("chat", {}).get("id"),
             text=f"Received message: {payload.get('message', {}).get('text', '')}"
         )
