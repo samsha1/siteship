@@ -1,6 +1,3 @@
-# /backend/main.py
-# Main FastAPI app entry point.
-
 from fastapi import FastAPI, Request, HTTPException
 from src.handlers.telegram import send_message
 from src.common.logger import get_logger
@@ -23,7 +20,7 @@ async def telegram_webhook(request: Request):
         
         payload = await request.json()
         logger.info("Received webhook payload: %s", payload)
-        return await send_message(
+        return  await send_message(
             chat_id=payload.get("message", {}).get("chat", {}).get("id"),
             text=f"Received message: {payload.get('message', {}).get('text', '')}"
         )

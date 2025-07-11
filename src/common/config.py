@@ -79,7 +79,7 @@ class Settings(BaseSettings):
         description="Supported LLM models",
     )
     
-    TELEGRAM_BOT_TOKEN: SecretStr = Field(
+    TELEGRAM_BOT_TOKEN: str = Field(
         ..., description="Telegram bot token for webhook integration"
     )
 
