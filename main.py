@@ -1,12 +1,11 @@
 
 from fastapi import FastAPI
-from src.routes import webhook
 from src.common.config import settings
 import uvicorn
 from contextlib import asynccontextmanager
-import httpx
-from supabase import create_client, Client, ClientOptions
 from src.common.logger import get_logger
+from src.core.models import ModelClients
+from src.routes import webhook
 
 logger = get_logger(__name__)
 
@@ -17,23 +16,13 @@ async def lifespan(app: FastAPI):
     """
     logger.info("Starting SiteshipAI API")
     try:
-        httpx_client = httpx.AsyncClient()
-        
-        options = ClientOptions(
-            httpx_client=httpx_client,
-            headers={"Authorization": f"Bearer {settings.SUPABASE_KEY}"}
-        )
-        
-        app.state.supabase: Client = create_client(
-            settings.SUPABASE_URL, settings.SUPABASE_KEY,options=options
-        )
+        ModelClients.get_instance()  # Initialize AI & DB models        
         logger.info("Application started successfully")
         yield
     except Exception as e:
         logger.error(f"Failed to start application: {e}")
         raise
     finally:
-        await httpx_client.aclose()
         logger.info("Shutting down SiteshipAI API")
     
 

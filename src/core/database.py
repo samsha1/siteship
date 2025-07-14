@@ -4,9 +4,11 @@ Database core module for managing database connections.
 
 from typing import Optional
 
+import httpx
+
 from src.common.config import settings
 from src.utils.logger import get_logger
-from supabase import create_client, Client
+from supabase import ClientOptions, create_client, Client
 
 
 logger = get_logger(__name__)
@@ -29,8 +31,15 @@ def init_db_client() -> Client:
     try:
         logger.info("Initializing database client")
 
-        _db_client = create_client(
-            settings.SUPABASE_URL, settings.SUPABASE_KEY
+        httpx_client = httpx.AsyncClient()
+        
+        options = ClientOptions(
+            httpx_client=httpx_client,
+            headers={"Authorization": f"Bearer {settings.SUPABASE_KEY}"}
+        )
+        
+        _db_client:Client = create_client(
+            settings.SUPABASE_URL, settings.SUPABASE_KEY,options=options
         )
 
         return _db_client
