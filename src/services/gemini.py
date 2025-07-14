@@ -1,11 +1,18 @@
 import httpx
+from google import genai
+from google.genai import types
 from src.common.config import settings
 from src.common.logger import get_logger
+
 
 logger = get_logger(__name__)
 
 GEMINI_API_KEY = settings.GEMINI_API_KEY
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+
+
+client = genai.Client()
+
 
 async def generate_website_code(user_input: str) -> str:
     """Generate static website code from Gemini Pro."""
@@ -15,6 +22,14 @@ async def generate_website_code(user_input: str) -> str:
     }
 
     params = {"key": GEMINI_API_KEY}
+    
+    response = client.models.generate_content(
+        model="gemini-2.5-pro",
+        contents="How does AI work?",
+        config=types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(thinking_budget=0) # Disables thinking
+        ),
+    )
 
     async with httpx.AsyncClient() as client:
         try:
