@@ -10,6 +10,7 @@ from src.common.config import settings
 from src.utils.logger import get_logger
 from supabase import ClientOptions, create_client, Client
 
+# This is not used in the current context, but kept for reference
 
 logger = get_logger(__name__)
 
