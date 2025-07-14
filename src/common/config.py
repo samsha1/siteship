@@ -82,6 +82,10 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = Field(
         ..., description="Telegram bot token for webhook integration"
     )
+    
+    GEMINI_API_KEY: str = Field(
+        ..., description="Gemini API key for code generation"
+    )
 
    
 
