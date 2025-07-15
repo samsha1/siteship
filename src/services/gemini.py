@@ -20,10 +20,6 @@ class Gemini:
     async def generate_website_code(self,user_input: str) -> str:
         """Generate static website code from Gemini Pro."""
         get_prompt_template = self.generate_prompt_from_payload(user_input)
-        # payload = {
-        #     "contents": [{"parts": [{"text": get_prompt_template}]}]
-        # }
-        
         try: 
             response = self.client.models.generate_content(
                 model="gemini-2.5-pro",
