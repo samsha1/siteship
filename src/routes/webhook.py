@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from src.handlers.telegram import send_message
 from src.core.models import ModelClients
 from src.handlers.supabase import save_html_to_storage
-from src.utils.parser import extract_and_zip_code
+from src.utils.parser import parse_mode_response_code, cleanup_temp_dir
 router = APIRouter()
 
 @router.post("/telegram-webhook")
@@ -26,7 +26,7 @@ async def telegram_webhook(request: Request):
         
         if code:
             # code = code.replace("```html", "").replace("```", "").strip()
-            zip_file_path = await extract_and_zip_code(model_response=code, user_id=str(chat_id))
+            zip_file_path = await parse_mode_response_code(model_response=code, user_id=str(chat_id))
 
             # call Supabase client to store the generated code
             supabase_client = get_model_instances.supabase_client
@@ -42,7 +42,7 @@ async def telegram_webhook(request: Request):
             #store file index.html file in storage and return the storage URL
             
             # can we snapshot the code (?)
-            
+            cleanup_temp_dir(user_id=str(chat_id))
             """Send the generated code back to the user via Telegram"""
             await send_message(chat_id, f"Please access your publsihed site here:\n\n{sink_to_s3_and_get_public_url}...")
             return JSONResponse(

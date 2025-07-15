@@ -1,12 +1,13 @@
 import re
 import zipfile
+import shutil
 from pathlib import Path
 from src.common.logger import get_logger
 
 
 logger = get_logger(__name__)
 
-async def extract_and_zip_code(model_response: str, user_id: str) -> str:
+async def parse_mode_response_code(model_response: str, user_id: str) -> str:
     """
     Parses Gemini response, writes HTML, CSS, JS to files,
     zips them, and returns local zip path.
@@ -52,3 +53,16 @@ async def extract_and_zip_code(model_response: str, user_id: str) -> str:
         zipf.write(js_file, arcname="script.js")
 
     return str(zip_file)
+
+
+
+def cleanup_temp_dir(user_id: str):
+    """
+    Deletes the /tmp/{user_id} directory and all its contents.
+    """
+    temp_dir = Path(f"./tmp/{user_id}")
+    if temp_dir.exists() and temp_dir.is_dir():
+        shutil.rmtree(temp_dir)
+        logger.info(f"✅ Cleaned up temp dir: {temp_dir}")
+    else:
+        logger.info(f"⚠️ Temp dir not found: {temp_dir}")

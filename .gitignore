@@ -47,8 +47,8 @@ logs/
 
 # Project specific
 .vector_cache/
-temp/
-
+temp/*
+tmp/*
 .python-version
 
 # Ignore project.toml locally but keep tracking it in the repository
@@ -56,3 +56,4 @@ temp/
 pyproject_local.toml
 
 /certs
+
