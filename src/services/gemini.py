@@ -41,19 +41,25 @@ class Gemini:
             You are an expert AI web developer.
             Your task is to generate a simple but complete static website based on the following requirements:
             {user_input}
-            Please provide the HTML, CSS, and JavaScript code.
+            Please provide the HTML, CSS, and JavaScript code strictly in the output format below.
             ---
                 ✅ Instructions:
                 - Create a single-page responsive website.
                 - Use only HTML, CSS, and minimal JavaScript if needed.
                 - Include clear structure: header, main, footer.
-                - Add placeholder text and images if details are missing.
+                - Add placeholder text and cloud images if details are missing.
                 - Use clean, readable indentation.
                 - Write all code inline in one file.
                 - Do NOT include explanations — only the final code.
-                - Return the code block fenced in triple backticks with `html`.
+                - Return the code block fenced in triple backticks with `html`, `css`, and `javascript` tags.
             ---
             Example output format:
             ```html
             <!-- Your generated HTML goes here -->
+            ```css
+            <!-- Your generated CSS goes here -->
+            ```javascript
+            <!--Your generated JavaScript goes here -->
+            ```
+            
         """

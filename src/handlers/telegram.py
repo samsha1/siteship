@@ -18,7 +18,6 @@ async def send_message(chat_id: int, text: str):
                 "text": text
             }
         )
-        logger.info(response.text)
         response.raise_for_status()
 
 async def send_photo(chat_id: int, photo_url: str, caption: str = ""):
