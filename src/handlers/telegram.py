@@ -20,3 +20,18 @@ async def send_message(chat_id: int, text: str):
         )
         logger.info(response.text)
         response.raise_for_status()
+
+async def send_photo(chat_id: int, photo_url: str, caption: str = ""):
+    """
+    Send a photo to the user in Telegram with an optional caption.
+    """
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            f"{TELEGRAM_API_URL}/sendPhoto",
+            json={
+                "chat_id": chat_id,
+                "photo": photo_url,
+                "caption": caption
+            }
+        )
+        response.raise_for_status()

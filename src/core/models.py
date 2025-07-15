@@ -38,10 +38,11 @@ class ModelClients:
             SupabaseClient: _description_
         """
         logger.info("Initializing Supabase client")
-        httpx_client = httpx.AsyncClient()
-        
+        # httpx_client = httpx.AsyncClient()
+        http_client = httpx.Client()
+
         options = ClientOptions(
-            httpx_client=httpx_client,
+            httpx_client=http_client,
             headers={"Authorization": f"Bearer {settings.SUPABASE_KEY}"}
         )
         
@@ -70,3 +71,10 @@ def get_gemini_client() -> genai.Client:
     """
     instance = ModelClients.get_instance()
     return instance.gemini_client
+
+def get_supabase_client() -> SupabaseClient:
+    """
+    Get the Supabase client singleton.
+    """
+    instance = ModelClients.get_instance()
+    return instance.supabase_client
