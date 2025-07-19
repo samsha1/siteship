@@ -1,6 +1,7 @@
 # Handles Supabase database and storage operations.
 from datetime import datetime
 import aiofiles
+from fastapi.responses import JSONResponse
 from src.common.logger import get_logger
 
 
@@ -29,3 +30,28 @@ async def save_html_to_storage(supabase_client, user_id: str, project_name: str,
     public_url = f"{supabase_client.storage.from_(bucket_name).get_public_url(bucket_file_path)}"
 
     return public_url
+
+async def trigger_edge_function_and_deploy_to_vercel(supabase_client, payload: dict):
+    
+    try:
+        result = await supabase_client.functions.invoke(
+            'vercel-deploy',
+            invoke_options={
+                "method": "POST",
+                "headers": {
+                    "Content-Type": "application/json"
+                },
+                "body": payload
+            }
+        )
+
+        return {
+            "status_code": result.status_code,
+            "data": result.data.decode("utf-8")  # decode bytes to string
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"message": f"Error invoking edge function: {str(e)}"}
+        )

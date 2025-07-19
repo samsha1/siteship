@@ -51,6 +51,7 @@ class Gemini:
                 - Use clean, readable indentation.
                 - Write all code inline in one file.
                 - Do NOT include explanations — only the final code.
+                - style.css should be linked in the html file <style src="style.css"></style> and script.js should be linked in the html file <script src="script.js"></script>. Please be sure to include these links inside the <header> tags in html code.
                 - Return the code block fenced in triple backticks with `html`, `css`, and `javascript` tags.
             ---
             Example output format:
