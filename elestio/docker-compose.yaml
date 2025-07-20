@@ -1,0 +1,18 @@
+services:
+  siteship-code-agent-api:
+    image: ghcr.io/samsha1/siteship-api:v0.0.10
+    container_name: siteship-api-1
+    ports:
+      - "${PORT:-8000}:8000"
+      - "${SSL_PORT:-8443}:8443"
+    env_file:
+      - .env
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - ENABLE_AUTH=${ENABLE_AUTH:-true}
+      - WORKERS=2
+    volumes:
+      - ssl_certs:/app/certs
+    restart: unless-stopped
+volumes:
+  ssl_certs:
