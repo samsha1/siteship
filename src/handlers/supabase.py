@@ -34,7 +34,7 @@ async def save_html_to_storage(supabase_client, user_id: str, project_name: str,
 async def trigger_edge_function_and_deploy_to_vercel(supabase_client, payload: dict):
     
     try:
-        result = await supabase_client.functions.invoke(
+        result = supabase_client.functions.invoke(
             'vercel-deploy',
             invoke_options={
                 "method": "POST",
@@ -45,10 +45,7 @@ async def trigger_edge_function_and_deploy_to_vercel(supabase_client, payload: d
             }
         )
 
-        return {
-            "status_code": result.status_code,
-            "data": result.data.decode("utf-8")  # decode bytes to string
-        }
+        return result
 
     except Exception as e:
         return JSONResponse(

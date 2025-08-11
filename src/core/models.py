@@ -16,6 +16,10 @@ GEMINI_API_KEY = settings.GEMINI_API_KEY
 TWILIO_ACCOUNT_SID=settings.TWILIO_ACCOUNT_SID
 TWILIO_AUTH_TOKEN= settings.TWILIO_AUTH_TOKEN
 
+_gemini_client: Optional[Gemini] = None
+_supabase_client: Optional[SupabaseClient] = None
+_twilio_client: Optional[TwilioClient] = None
+
 
 class ModelClients:
     _instance: Optional["ModelClients"] = None
@@ -23,7 +27,6 @@ class ModelClients:
     def __init__(self):
         pass  # No explicit init needed
 
-    @cached_property
     def gemini_client(self) -> Gemini:
         """
             Initialize and return the Gemini client.
@@ -34,7 +37,6 @@ class ModelClients:
         initialize_gemini = genai.Client(api_key=GEMINI_API_KEY)
         return Gemini(initialize_gemini)
 
-    @cached_property
     def supabase_client(self) -> SupabaseClient:
         """
             Initialize and return the Supabase client.
@@ -57,7 +59,6 @@ class ModelClients:
             raise Exception("Database _db_client not available")
         return _db_client
 
-    @cached_property
     def twillio_client(self) -> TwilioClient:
         """Initiate Twilio Client
 
@@ -86,12 +87,64 @@ def get_gemini_client() -> genai.Client:
     """
     Get the Gemini client singleton.
     """
-    instance = ModelClients.get_instance()
-    return instance.gemini_client
+    global _gemini_client
+    
+    if _gemini_client is None:
+        try:
+            init_clients()
+        except Exception as e:
+            logger.error(f"Failed to initialize Gemini client: {e}")
+    return _gemini_client
 
 def get_supabase_client() -> SupabaseClient:
     """
     Get the Supabase client singleton.
     """
-    instance = ModelClients.get_instance()
-    return instance.supabase_client
+    global _supabase_client
+    if _supabase_client is None:
+        try:
+            init_clients()
+        except Exception as e:
+            logger.error(f"Failed to initialize Supabase client: {e}")
+    return _supabase_client
+
+def get_twilio_client() -> TwilioClient:
+    """
+    Get the Twilio client singleton.
+    """
+    global _twilio_client
+    if not _twilio_client:
+        try:
+            init_clients()
+        except Exception as e:
+            logger.error(f"Failed to initialize Twilio client: {e}")
+            
+    return _twilio_client
+
+
+
+
+def init_clients() -> None:
+    """
+    Initialize the instances.
+
+    Raises:
+        Exception: If model initialization fails
+    """
+    global _supabase_client, _twilio_client, _gemini_client
+    try:
+        logger.info("Initializing RAG models and OpenAI model validation")
+
+        # Fetch available OpenAI models first
+        models = ModelClients.get_instance()
+        _supabase_client = models.supabase_client()
+        if _supabase_client is None:
+            raise Exception("Database client not available for model initialization")
+
+        _gemini_client = models.gemini_client()
+        _twilio_client = models.twillio_client()
+        logger.info("RAG models initialized successfully")
+
+    except Exception as e:
+        logger.error(f"Failed to initialize RAG models: {e}")
+        raise

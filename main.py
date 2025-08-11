@@ -4,7 +4,7 @@ from src.common.config import settings
 import uvicorn
 from contextlib import asynccontextmanager
 from src.common.logger import get_logger
-from src.core.models import ModelClients
+from src.core.models import init_clients
 from src.routes import webhook
 
 logger = get_logger(__name__)
@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
     """
     logger.info("Starting SiteshipAI API")
     try:
-        ModelClients.get_instance()  # Initialize AI & DB models        
+        init_clients()  # Initialize AI & DB models        
         logger.info("Application started successfully")
 
         yield
