@@ -1,10 +1,14 @@
 # routes/webhook.py
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, Request, logger, status, Form
 from fastapi.responses import JSONResponse
 from src.handlers.telegram import send_message
 from src.core.models import ModelClients
 from src.handlers.supabase import save_html_to_storage, trigger_edge_function_and_deploy_to_vercel
 from src.utils.parser import parse_mode_response_code, cleanup_temp_dir
+from src.common.logger import get_logger
+
+logger = get_logger(__name__)
+
 router = APIRouter()
 
 @router.post("/telegram-webhook")
@@ -70,6 +74,72 @@ async def telegram_webhook(request: Request):
         content={"success": False, "message": "Message Failed to send"},
     )
     
+
+
+
+
+
+
+@router.post("/whatsapp-webhook")
+async def whatsapp_webhook(request: Request, From: str = Form(...), To: str = Form(...), Body: str = Form(...)):
+    """Handle incoming WhatsApp webhook requests."""
+    logger.info(f"From: {From}, To: {To}, Body: {Body}")
+    form_data = await request.form()
+    data = dict(form_data)
+    message_id = data.get('SmsMessageSid')
+    wa_id = data.get('WaId')
+    body = data.get('Body')
+    from_ = data.get('From').split(':')[1]
+
+
+    # chat_id = payload.get("messages", [{}])[0].get("from")
+    # user_input = payload.get("messages", [{}])[0].get("text", {}).get("body", "")
+    # whatsapp_user_name = payload.get("messages", [{}])[0].get("author")
+
+    if not message_id or not wa_id or not body:
+        return {"ok": False, "reason": "Invalid payload"}
+
+    # Similar logic as Telegram webhook
+    get_model_instances = ModelClients.get_instance()
+    code = None
+    if get_model_instances.gemini_client:
+        # code = await get_model_instances.gemini_client.generate_website_code(user_input)
+        code = get_static_response_to_save_gemini_call()
+        
+        if code:
+            zip_file_path = await parse_mode_response_code(model_response=code, user_id=wa_id)
+
+            supabase_client = get_model_instances.supabase_client
+            
+            sink_to_s3_and_get_public_url = await save_html_to_storage(
+                supabase_client,
+                user_id=str(wa_id),  # Use chat_id as user_id
+                project_name="generated_website",
+                file_path=zip_file_path
+            )
+            cleanup_temp_dir(user_id=str(wa_id))
+            
+            payload = {
+                "username": wa_id,
+                "project_name": "siteshipai-codebox",
+                "url": sink_to_s3_and_get_public_url
+            }
+            res = await trigger_edge_function_and_deploy_to_vercel(supabase_client, payload)
+            if res['status_code'] != 200:
+                return JSONResponse(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    content={"success": False, "message": "Failed to deploy site", res: res['data']},
+                )  
+
+            await send_message(chat_id, f"Please access your publsihed site here:\n\n{res['data']['deployed_url']} \n\nYou can also download the code here:\n\n{sink_to_s3_and_get_public_url}")
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={"success": True, "message": "Code generated and sent successfully!"}
+            )  
+
+    await send_message(chat_id, "Sorry, I couldn't generate the code for your request. Please try again later.")
+    return
+
 
 def get_static_response_to_save_gemini_call():
     """

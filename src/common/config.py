@@ -86,6 +86,14 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = Field(
         ..., description="Gemini API key for code generation"
     )
+    
+    TWILIO_ACCOUNT_SID: str = Field(
+       ..., description="Twillio Account SID"
+    )
+    
+    TWILIO_AUTH_TOKEN: str = Field(
+       ..., description="Twillio Auth Token"
+    )
 
    
 

@@ -7,10 +7,14 @@ from src.common.logger import get_logger
 import httpx
 from supabase import ClientOptions, create_client, Client as SupabaseClient
 from src.services.gemini import Gemini
+from twilio.rest import Client as TwilioClient
+
 
 logger = get_logger(__name__)
 
 GEMINI_API_KEY = settings.GEMINI_API_KEY
+TWILIO_ACCOUNT_SID=settings.TWILIO_ACCOUNT_SID
+TWILIO_AUTH_TOKEN= settings.TWILIO_AUTH_TOKEN
 
 
 class ModelClients:
@@ -52,6 +56,19 @@ class ModelClients:
         if _db_client is None:
             raise Exception("Database _db_client not available")
         return _db_client
+
+    @cached_property
+    def twillio_client(self) -> TwilioClient:
+        """Initiate Twilio Client
+
+        Returns:
+            TwilioClient: _description_
+        """
+        twilio_client = TwilioClient(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        if twilio_client is None:
+            raise Exception("Twilio _client not available")
+        return twilio_client
+
 
     @classmethod
     def get_instance(cls) -> "ModelClients":

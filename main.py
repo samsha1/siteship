@@ -18,6 +18,7 @@ async def lifespan(app: FastAPI):
     try:
         ModelClients.get_instance()  # Initialize AI & DB models        
         logger.info("Application started successfully")
+
         yield
     except Exception as e:
         logger.error(f"Failed to start application: {e}")
