@@ -6,6 +6,7 @@ from src.core.models import get_gemini_client,get_supabase_client,get_twilio_cli
 from src.handlers.supabase import save_html_to_storage, trigger_edge_function_and_deploy_to_vercel
 from src.utils.parser import parse_mode_response_code, cleanup_temp_dir
 from src.common.logger import get_logger
+import json
 
 logger = get_logger(__name__)
 
@@ -35,8 +36,9 @@ async def whatsapp_webhook(request: Request, From: str = Form(...), To: str = Fo
     gemini_client = get_gemini_client()
     code = None
     if gemini_client:
-        # code = await get_model_instances.gemini_client.generate_website_code(user_input)
-        code = get_static_response_to_save_gemini_call()
+        send_message(from_whatsapp_number=to_,to_number=from_, text="Generating Code... This may take awhile. 🚀")
+        code = await gemini_client.generate_website_code(body)
+        # code = get_static_response_to_save_gemini_call()
         
         if code:
             zip_file_path = await parse_mode_response_code(model_response=code, user_id=wa_id)
@@ -57,19 +59,25 @@ async def whatsapp_webhook(request: Request, From: str = Form(...), To: str = Fo
                 "url": sink_to_s3_and_get_public_url
             }
             res = await trigger_edge_function_and_deploy_to_vercel(supabase_client, payload)
-            if 'status' not in res:
-                return JSONResponse(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    content={"success": False, "message": "Failed to deploy site", res: res['data']},
-                )
-            await send_message(from_whatsapp_number=to_,to_number=from_, text="Your request has been processed. This may take awhile.")
+            try:
+                res_json = json.loads(res)
+                if res_json:
+                    # return JSONResponse(
+                    #     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    #     content={"success": False, "message": "Failed to deploy site", res: res['data']},
+                    # )
+                    send_message(from_whatsapp_number=to_,to_number=from_, text=f"Your request has been processed. Current Status: {res_json['status']}")
+            except Exception as e:
+                send_message(from_whatsapp_number=to_,to_number=from_, text="Something Went Wrong! Please Try Again.")
 
+                
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
                 content={"success": True}
-            ) 
+            )
+            
 
-    await send_message(from_whatsapp_number=to_,to_number=from_, text="Sorry, I couldn't generate the code for your request. Please try again later.")
+    send_message(from_whatsapp_number=to_,to_number=from_, text="Sorry, I couldn't generate the code for your request. Please try again later.")
     return
 
 
