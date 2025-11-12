@@ -1,6 +1,6 @@
 services:
   siteship-code-agent-api:
-    image: ghcr.io/samsha1/siteship-api:v0.0.10
+    image: ghcr.io/samsha1/siteship-api:v0.0.11
     container_name: siteship-api-1
     ports:
       - "${PORT:-8000}:8000"

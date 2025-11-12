@@ -33,48 +33,51 @@ async def whatsapp_webhook(request: Request, From: str = Form(...), To: str = Fo
         return {"ok": False, "reason": "Invalid payload"}
 
     # Similar logic as Telegram webhook
-    gemini_client = get_gemini_client()
-    code = None
-    if gemini_client:
-        send_message(from_whatsapp_number=to_,to_number=from_, text="Generating Code... This may take awhile. 🚀")
-        code = await gemini_client.generate_website_code(body)
-        # code = get_static_response_to_save_gemini_call()
+    # gemini_client = get_gemini_client()
+    # if gemini_client:
+    send_message(from_whatsapp_number=to_,to_number=from_, text="Generating Code... This may take awhile. 🚀")
+    # code = await gemini_client.generate_website_code(body)
+    # # code = get_static_response_to_save_gemini_call()
+    
+    # if code:
+    #     zip_file_path = await parse_mode_response_code(model_response=code, user_id=wa_id)
+
+
+    #     supabase_client = get_supabase_client()
         
-        if code:
-            zip_file_path = await parse_mode_response_code(model_response=code, user_id=wa_id)
+    #     sink_to_s3_and_get_public_url = await save_html_to_storage(
+    #         supabase_client,
+    #         user_id=str(wa_id),  # Use chat_id as user_id
+    #         project_name="generated_website",
+    #         file_path=
+    #     )
+    #     cleanup_temp_dir(user_id=str(wa_id))
+        
+    payload = {
+        "username": wa_id,
+        "project_name": "siteshipai-codebox",
+        "prompt": body,
+        "metadata": {"source": "whatsapp", "message_id": message_id}
+    }
+    
+    
+    res = await trigger_edge_function_and_deploy_to_vercel(supabase_client, payload)
+    try:
+        res_json = json.loads(res)
+        if res_json:
+            # return JSONResponse(
+            #     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            #     content={"success": False, "message": "Failed to deploy site", res: res['data']},
+            # )
+            send_message(from_whatsapp_number=to_,to_number=from_, text=f"Your request has been processed. Current Status: {res_json['status']}")
+    except Exception as e:
+        send_message(from_whatsapp_number=to_,to_number=from_, text="Something Went Wrong! Please Try Again.")
 
-            supabase_client = get_supabase_client()
-            
-            sink_to_s3_and_get_public_url = await save_html_to_storage(
-                supabase_client,
-                user_id=str(wa_id),  # Use chat_id as user_id
-                project_name="generated_website",
-                file_path=zip_file_path
-            )
-            cleanup_temp_dir(user_id=str(wa_id))
-            
-            payload = {
-                "username": wa_id,
-                "project_name": "siteshipai-codebox",
-                "url": sink_to_s3_and_get_public_url
-            }
-            res = await trigger_edge_function_and_deploy_to_vercel(supabase_client, payload)
-            try:
-                res_json = json.loads(res)
-                if res_json:
-                    # return JSONResponse(
-                    #     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    #     content={"success": False, "message": "Failed to deploy site", res: res['data']},
-                    # )
-                    send_message(from_whatsapp_number=to_,to_number=from_, text=f"Your request has been processed. Current Status: {res_json['status']}")
-            except Exception as e:
-                send_message(from_whatsapp_number=to_,to_number=from_, text="Something Went Wrong! Please Try Again.")
-
-                
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content={"success": True}
-            )
+        
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"success": True}
+    )
             
 
     send_message(from_whatsapp_number=to_,to_number=from_, text="Sorry, I couldn't generate the code for your request. Please try again later.")
