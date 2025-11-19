@@ -21,3 +21,7 @@ dependencies = [
     "python-multipart (>=0.0.20,<0.0.21)",
     "twilio (>=9.6.5,<10.0.0)",
 ]
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.1"
+

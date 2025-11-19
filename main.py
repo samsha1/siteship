@@ -4,7 +4,7 @@ from src.common.config import settings
 import uvicorn
 from contextlib import asynccontextmanager
 from src.common.logger import get_logger
-from src.core.models import init_clients
+from src.core.models import init_supabase_client, init_twilio_client, init_gemini_client
 from src.routes import webhook
 
 logger = get_logger(__name__)
@@ -16,7 +16,11 @@ async def lifespan(app: FastAPI):
     """
     logger.info("Starting SiteshipAI API")
     try:
-        init_clients()  # Initialize AI & DB models        
+        # Initialize AI & DB models and store in app.state
+        app.state.supabase = await init_supabase_client()
+        app.state.twilio = init_twilio_client()
+        app.state.gemini = init_gemini_client()
+        
         logger.info("Application started successfully")
 
         yield

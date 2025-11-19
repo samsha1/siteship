@@ -2,86 +2,142 @@
 from fastapi import APIRouter, Request, logger, status, Form
 from fastapi.responses import JSONResponse
 from src.handlers.whatsapp import send_message
-from src.core.models import get_gemini_client,get_supabase_client,get_twilio_client
 from src.handlers.supabase import save_html_to_storage, trigger_edge_function_and_deploy_to_vercel
 from src.utils.parser import parse_mode_response_code, cleanup_temp_dir
 from src.common.logger import get_logger
+from src.services.db import (
+    get_user_by_phone, create_user, update_user_state, create_project,
+    get_user_projects, get_project_by_id, save_prompt
+)
 import json
 
 logger = get_logger(__name__)
 
 router = APIRouter()
 
+
 @router.post("/whatsapp-webhook")
 async def whatsapp_webhook(request: Request, From: str = Form(...), To: str = Form(...), Body: str = Form(...)):
     """Handle incoming WhatsApp webhook requests."""
     logger.info(f"From: {From}, To: {To}, Body: {Body}")
+    
+    # Get clients from app.state
+    supabase = request.app.state.supabase
+    twilio = request.app.state.twilio
+    
     form_data = await request.form()
     data = dict(form_data)
     message_id = data.get('SmsMessageSid')
     wa_id = data.get('WaId')
-    body = data.get('Body')
-    from_ = data.get('From')
-    to_ = data.get('To')
-    
+    profile_name = data.get('ProfileName')
 
-    # chat_id = payload.get("messages", [{}])[0].get("from")
-    # user_input = payload.get("messages", [{}])[0].get("text", {}).get("body", "")
-    # whatsapp_user_name = payload.get("messages", [{}])[0].get("author")
-
-    if not message_id or not wa_id or not body:
+    if not message_id or not wa_id or not Body:
         return {"ok": False, "reason": "Invalid payload"}
 
-    # Similar logic as Telegram webhook
-    # gemini_client = get_gemini_client()
-    # if gemini_client:
-    send_message(from_whatsapp_number=to_,to_number=from_, text="Generating Code... This may take awhile. 🚀")
-    # code = await gemini_client.generate_website_code(body)
-    # # code = get_static_response_to_save_gemini_call()
-    
-    # if code:
-    #     zip_file_path = await parse_mode_response_code(model_response=code, user_id=wa_id)
+    user = await get_user_by_phone(supabase, From)
 
+    if not user:
+        # 2.1 New User
+        await create_user(supabase, From)
+        send_message(twilio, To, From, "Welcome 👋\nI can help you build a website in minutes.\nLet's get started by Starting a new project. Please name your project")
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
 
-    #     supabase_client = get_supabase_client()
-        
-    #     sink_to_s3_and_get_public_url = await save_html_to_storage(
-    #         supabase_client,
-    #         user_id=str(wa_id),  # Use chat_id as user_id
-    #         project_name="generated_website",
-    #         file_path=
-    #     )
-    #     cleanup_temp_dir(user_id=str(wa_id))
-        
-    payload = {
-        "username": wa_id,
-        "project_name": "siteshipai-codebox",
-        "prompt": body,
-        "metadata": {"source": "whatsapp", "message_id": message_id}
-    }
-    
-    
-    res = await trigger_edge_function_and_deploy_to_vercel(supabase_client, payload)
-    try:
-        res_json = json.loads(res)
-        if res_json:
-            # return JSONResponse(
-            #     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            #     content={"success": False, "message": "Failed to deploy site", res: res['data']},
-            # )
-            send_message(from_whatsapp_number=to_,to_number=from_, text=f"Your request has been processed. Current Status: {res_json['status']}")
-    except Exception as e:
-        send_message(from_whatsapp_number=to_,to_number=from_, text="Something Went Wrong! Please Try Again.")
+    state = user.get("state")
+    user_id = user["id"]
 
+    # Handle "menu" command to reset
+    if Body.strip().lower() == "menu":
+        await update_user_state(supabase, user_id, "WAITING_FOR_OPTION")
+        send_message(twilio, To, From, "Welcome 👋\nI can help you build a website in minutes.\nDo you want to:\n1️⃣ Start a new project\n2️⃣ Continue existing project\nReply with 1 or 2.")
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
+
+    if state == "WAITING_FOR_PROJECT_NAME":
+        project_name = Body.strip()
+        project = await create_project(supabase, user_id, project_name)
+        if project:
+            await update_user_state(supabase, user_id, f"ACTIVE_PROJECT:{project['id']}")
+            send_message(twilio, To, From, "Congratulations your project is created! Now, tell me more about this project so that I can help you build great websites.")
+        else:
+            send_message(twilio, To, From, "Failed to create project. Please try again.")
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
+
+    if state == "WAITING_FOR_OPTION":
+        if Body.strip() == "1":
+            await update_user_state(supabase, user_id, "WAITING_FOR_PROJECT_NAME")
+            send_message(twilio, To, From, "Please name your project")
+        elif Body.strip() == "2":
+            projects = await get_user_projects(supabase, user_id)
+            if not projects:
+                send_message(twilio, To, From, "You have no existing projects. Reply with 1 to start a new one.")
+            else:
+                msg = "Select a project to resume:\n"
+                for i, p in enumerate(projects):
+                    msg += f"{i+1}. {p['name']}\n"
+                msg += "Reply with the number."
+                await update_user_state(supabase, user_id, "WAITING_FOR_PROJECT_SELECTION")
+                send_message(twilio, To, From, msg)
+        else:
+            send_message(twilio, To, From, "Invalid option. Reply with 1 or 2.")
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
+
+    if state == "WAITING_FOR_PROJECT_SELECTION":
+        try:
+            selection = int(Body.strip())
+            projects = await get_user_projects(supabase, user_id)
+            if 1 <= selection <= len(projects):
+                project = projects[selection-1]
+                await update_user_state(supabase, user_id, f"ACTIVE_PROJECT:{project['id']}")
+                send_message(twilio, To, From, f"Resuming project {project['name']}. Tell me what you want to change or add.")
+            else:
+                send_message(twilio, To, From, "Invalid selection. Please try again.")
+        except ValueError:
+            send_message(twilio, To, From, "Please reply with a number.")
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
+
+    if state and state.startswith("ACTIVE_PROJECT:"):
+        project_id = state.split(":")[1]
+        project = await get_project_by_id(supabase, project_id)
         
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={"success": True}
-    )
+        if not project:
+             await update_user_state(supabase, user_id, "WAITING_FOR_OPTION")
+             send_message(twilio, To, From, "Project not found. Returning to menu.")
+             send_message(twilio, To, From, "Welcome 👋\nI can help you build a website in minutes.\nDo you want to:\n1️⃣ Start a new project\n2️⃣ Continue existing project\nReply with 1 or 2.")
+             return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
+
+        send_message(twilio, To, From, "Generating Code... This may take awhile. 🚀")
+        
+        await save_prompt(supabase, user_id, project_id, message_id, Body)
+
+        last_summary = project.get("last_ai_summary", "")
+        
+        payload = {
+            "username": wa_id,
+            "project_name": project['name'],
+            "prompt": Body,
+            "metadata": {
+                "source": "whatsapp", 
+                "message_id": message_id, 
+                "profile_name": profile_name,
+                "project_id": project_id,
+                "last_ai_summary": last_summary
+            }
+        }
+        
+        res = await trigger_edge_function_and_deploy_to_vercel(supabase, payload)
+        try:
+            res_json = json.loads(res)
+            if res_json:
+                send_message(twilio, To, From, f"Your request has been processed. Current Status: {res_json.get('status', 'Unknown')}")
+        except Exception as e:
+            logger.error(f"Error processing response: {e}")
+            send_message(twilio, To, From, "Something Went Wrong! Please Try Again.")
             
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
 
-    send_message(from_whatsapp_number=to_,to_number=from_, text="Sorry, I couldn't generate the code for your request. Please try again later.")
-    return
+    # Default for existing user with no state (or IDLE)
+    await update_user_state(supabase, user_id, "WAITING_FOR_OPTION")
+    send_message(twilio, To, From, "Welcome 👋\nI can help you build a website in minutes.\nDo you want to:\n1️⃣ Start a new project\n2️⃣ Continue existing project\nReply with 1 or 2.")
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
 
 
 def get_static_response_to_save_gemini_call():
