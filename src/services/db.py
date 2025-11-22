@@ -16,12 +16,12 @@ async def get_user_by_phone(supabase, phone_number: str) -> Optional[Dict[str, A
         logger.error(f"Error fetching user by phone {phone_number}: {e}")
         return None
 
-async def create_user(supabase, phone_number: str) -> Optional[Dict[str, Any]]:
+async def create_user(supabase, name: str, phone_number: str, platform: str) -> Optional[Dict[str, Any]]:
     """
     Create a new user with initial state.
     """
     try:
-        data = {"phone_number": phone_number, "state": "WAITING_FOR_PROJECT_NAME"}
+        data = {"name": name, "phone_number": phone_number, "platform": platform, "state": "WAITING_FOR_PROJECT_NAME"}
         response = await supabase.table("users").insert(data).execute()
         if response.data:
             return response.data[0]

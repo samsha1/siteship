@@ -38,7 +38,7 @@ async def whatsapp_webhook(request: Request, From: str = Form(...), To: str = Fo
 
     if not user:
         # 2.1 New User
-        await create_user(supabase, From)
+        await create_user(supabase, profile_name, From, "WA")
         send_message(twilio, To, From, "Welcome 👋\nI can help you build a website in minutes.\nLet's get started by Starting a new project. Please name your project")
         return JSONResponse(status_code=status.HTTP_200_OK, content={"success": True})
 

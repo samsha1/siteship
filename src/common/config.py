@@ -31,7 +31,6 @@ class Settings(BaseSettings):
         default=[
             "http://localhost:3000",
             "http://localhost:8080",
-            "https://materialisting.com",
         ],
         description="Allowed CORS origins",
     )

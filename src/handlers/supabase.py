@@ -34,7 +34,7 @@ async def save_html_to_storage(supabase_client, user_id: str, project_name: str,
 async def trigger_edge_function_and_deploy_to_vercel(supabase_client, payload: dict):
     
     try:
-        result = supabase_client.functions.invoke(
+        result = await supabase_client.functions.invoke(
             'vercel-deploy',
             invoke_options={
                 "method": "POST",
